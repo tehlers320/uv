@@ -130,6 +130,8 @@ pub struct BaseClientBuilder<'a> {
     custom_client: Option<Client>,
     /// uv subcommand in which this client is being used
     subcommand: Option<Vec<String>>,
+    /// Additional data to include in the `User-Agent` linehaul metadata.
+    user_agent_user_data: Option<String>,
     /// Optional name for this client, used in debug logging.
     client_name: Option<&'static str>,
     /// Whether to disable retry delays (for testing).
@@ -237,6 +239,7 @@ impl Default for BaseClientBuilder<'_> {
             cross_origin_credential_policy: CrossOriginCredentialsPolicy::Secure,
             custom_client: None,
             subcommand: None,
+            user_agent_user_data: env::var(EnvVars::UV_USER_AGENT_USER_DATA).ok(),
             client_name: None,
             no_retry_delay: env::var_os(EnvVars::UV_INTERNAL__TEST_NO_HTTP_RETRY_DELAY).is_some(),
             cache_read_runtime: Arc::new(CacheReadRuntime::new(Concurrency::DEFAULT_CACHE_READS)),
@@ -436,6 +439,15 @@ impl<'a> BaseClientBuilder<'a> {
         self
     }
 
+    /// Set additional data to include in the `User-Agent` linehaul metadata.
+    ///
+    /// Defaults to the value of `UV_USER_AGENT_USER_DATA`.
+    #[must_use]
+    pub fn user_agent_user_data(mut self, user_data: String) -> Self {
+        self.user_agent_user_data = Some(user_data);
+        self
+    }
+
     #[must_use]
     pub fn client_name(mut self, name: &'static str) -> Self {
         self.client_name = Some(name);
@@ -561,7 +573,12 @@ impl<'a> BaseClientBuilder<'a> {
         let mut user_agent_string = format!("uv/{}", version());
 
         // Add linehaul metadata.
-        let linehaul = LineHaul::new(self.markers, self.platform, self.subcommand.clone());
+        let linehaul = LineHaul::new(
+            self.markers,
+            self.platform,
+            self.subcommand.clone(),
+            self.user_agent_user_data.clone(),
+        );
         if let Ok(output) = serde_json::to_string(&linehaul) {
             let _ = write!(user_agent_string, " {output}");
         }

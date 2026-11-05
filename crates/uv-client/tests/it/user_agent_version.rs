@@ -136,6 +136,59 @@ async fn test_user_agent_has_subcommand() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_user_agent_has_user_data() -> Result<()> {
+    // Initialize dummy http server
+    let (server_task, addr) = start_http_user_agent_server().await?;
+
+    // Initialize uv-client
+    let cache = Cache::temp()?.init().await?;
+    let client = RegistryClientBuilder::new(
+        BaseClientBuilder::default().user_agent_user_data(r#"{"team": "data"}"#.to_owned()),
+        cache,
+    )
+    .build()?;
+
+    // Send request to our dummy server
+    let url = SafeUrl::from_str(&format!("http://{addr}"))?;
+    let res = client
+        .cached_client()
+        .uncached()
+        .for_host(&url)
+        .get(url)
+        .send()
+        .await?;
+
+    // Check the HTTP status
+    assert!(res.status().is_success());
+
+    // Check User Agent
+    let body = res.text().await?;
+
+    let (uv_version, uv_linehaul) = body
+        .split_once(' ')
+        .expect("Failed to split User-Agent header");
+
+    let linehaul: serde_json::Value = serde_json::from_str(uv_linehaul)?;
+
+    // Assert linehaul user agent
+    let version = escaped_version();
+    let filters = vec![(version.as_str(), "[VERSION]")];
+    with_settings!({
+        filters => filters
+    }, {
+        // Assert uv version
+        assert_snapshot!(uv_version, @"uv/[VERSION]");
+        // Assert linehaul json
+        assert_json_snapshot!(&linehaul["user_data"], @r#""{\"team\": \"data\"}""#);
+    });
+
+    // Wait for the server task to complete, to be a good citizen.
+    let _ = server_task.await?;
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_user_agent_has_linehaul() -> Result<()> {
     // Initialize dummy http server
     let (server_task, addr) = start_http_user_agent_server().await?;

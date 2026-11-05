@@ -909,6 +909,14 @@ impl EnvVars {
     #[attr_added_in("0.7.21")]
     pub const UV_HTTP_RETRIES: &'static str = "UV_HTTP_RETRIES";
 
+    /// Additional data to include in the `User-Agent` header sent with HTTP requests.
+    ///
+    /// The value is added verbatim under the `user_data` key of the JSON metadata in the
+    /// `User-Agent` header, matching pip's `PIP_USER_AGENT_USER_DATA`. A JSON-encoded string is
+    /// recommended, e.g., `{"team": "data-platform"}`.
+    #[attr_added_in("next release")]
+    pub const UV_USER_AGENT_USER_DATA: &'static str = "UV_USER_AGENT_USER_DATA";
+
     /// Timeout (in seconds) for HTTP requests. Equivalent to `UV_HTTP_TIMEOUT`.
     #[attr_added_in("0.1.6")]
     pub const UV_REQUEST_TIMEOUT: &'static str = "UV_REQUEST_TIMEOUT";

@@ -56,6 +56,9 @@ pub(crate) struct LineHaul {
     setuptools_version: Option<String>,
     rustc_version: Option<String>,
     ci: Option<bool>,
+    /// Arbitrary user-provided data, omitted when unset (as in pip).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    user_data: Option<String>,
 }
 
 /// Implements Linehaul information format as defined by
@@ -68,6 +71,7 @@ impl LineHaul {
         markers: Option<&MarkerEnvironment>,
         platform: Option<&Platform>,
         subcommand: Option<Vec<String>>,
+        user_data: Option<String>,
     ) -> Self {
         // https://github.com/pypa/pip/blob/24.0/src/pip/_internal/network/session.py#L87
         let looks_like_ci = [
@@ -148,6 +152,7 @@ impl LineHaul {
             // Calling rustc --version is likely too slow.
             rustc_version: None,
             ci: looks_like_ci,
+            user_data,
         }
     }
 }
